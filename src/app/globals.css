@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-hypo: #ef4444;
+  --color-normal: #22c55e;
+  --color-slightly-high: #f59e0b;
+  --color-high: #f97316;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
