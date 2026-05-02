@@ -1,284 +1,654 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GlicIA — Assistente de Glicemia</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; color: #0f172a; min-height: 100vh; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>GlicIA – Assistente de Glicemia</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f1f5f9;color:#0f172a;min-height:100vh}
 
-    /* Header */
-    .header { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
-    .header-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.1rem; }
-    .badge { background: #dbeafe; color: #1d4ed8; font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
-    .header-user { font-size: 14px; color: #64748b; }
+/* ── HEADER ── */
+.header{background:#1e3a5f;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1.15rem}
+.badge{background:#3b82f6;font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600;letter-spacing:.5px}
 
-    /* Layout */
-    .container { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; display: flex; flex-direction: column; gap: 16px; }
+/* ── TABS ── */
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e2e8f0;position:sticky;top:52px;z-index:99}
+.tab{flex:1;padding:13px 8px;text-align:center;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tab.active{color:#1e3a5f;border-bottom-color:#1e3a5f}
+.tab:hover:not(.active){background:#f8fafc}
 
-    /* Cards */
-    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; }
-    .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 14px; color: #0f172a; }
+/* ── CONTAINER ── */
+.page{display:none;max-width:520px;margin:0 auto;padding:20px 16px 60px}
+.page.active{display:block}
 
-    /* Stats grid */
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; text-align: center; }
-    .stat-value { font-size: 24px; font-weight: 700; color: #0f172a; }
-    .stat-value.green { color: #16a34a; }
-    .stat-label { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+/* ── CARD ── */
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:20px;margin-bottom:16px}
+.card h2{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:6px}
 
-    /* Alert critical */
-    .alert-critical { background: #dc2626; color: #fff; border-radius: 16px; padding: 16px; display: flex; gap: 12px; align-items: flex-start; }
-    .alert-critical .icon { font-size: 22px; flex-shrink: 0; }
-    .alert-critical strong { font-size: 14px; display: block; }
-    .alert-critical p { font-size: 12px; margin-top: 4px; color: #fecaca; }
+/* ── FORM ── */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px}
+.form-group input[type=number]{width:100%;border:2px solid #e2e8f0;border-radius:12px;padding:12px 16px;font-size:22px;font-weight:700;outline:none;transition:border-color .2s;text-align:center}
+.form-group input[type=number]:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.unit-hint{text-align:center;font-size:12px;color:#94a3b8;margin-top:4px}
+.error-msg{color:#dc2626;font-size:12px;margin-top:5px;display:none}
+.error-msg.show{display:block}
 
-    /* Form */
-    label { display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px; }
-    input[type=number] { width: 100%; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px 16px; font-size: 20px; font-weight: 700; outline: none; transition: border-color .2s; }
-    input[type=number]:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
-    .form-group { margin-bottom: 14px; }
-    .error-msg { color: #dc2626; font-size: 12px; margin-top: 5px; display: none; }
-    .error-msg.show { display: block; }
+/* ── OPTION BUTTONS ── */
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opt{padding:8px 14px;border-radius:10px;font-size:13px;font-weight:500;border:2px solid #e2e8f0;background:#fff;color:#374151;cursor:pointer;transition:all .15s}
+.opt.active{background:#1e3a5f;color:#fff;border-color:#1e3a5f}
+.opt:hover:not(.active){background:#f1f5f9;border-color:#cbd5e1}
 
-    /* Context buttons */
-    .contexts { display: flex; gap: 8px; flex-wrap: wrap; }
-    .ctx-btn { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; border: 1px solid #d1d5db; background: #fff; color: #374151; cursor: pointer; transition: all .15s; }
-    .ctx-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
-    .ctx-btn:hover:not(.active) { background: #f1f5f9; }
+/* ── BTN PRIMARY ── */
+.btn-primary{width:100%;background:#1e3a5f;color:#fff;border:none;border-radius:13px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s;letter-spacing:.2px}
+.btn-primary:hover{background:#1e40af}
+.btn-secondary{width:100%;background:#f1f5f9;color:#1e3a5f;border:2px solid #cbd5e1;border-radius:13px;padding:13px;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-secondary:hover{background:#e2e8f0}
 
-    /* Submit button */
-    .btn-primary { width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s; margin-top: 4px; }
-    .btn-primary:hover { background: #1d4ed8; }
+/* ── ALERT CRITICAL ── */
+.alert-critical{background:#dc2626;color:#fff;border-radius:16px;padding:16px 18px;display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.4)}70%{box-shadow:0 0 0 10px rgba(220,38,38,0)}}
+.alert-critical .icon{font-size:24px;flex-shrink:0;margin-top:2px}
+.alert-critical strong{display:block;font-size:15px;font-weight:700}
+.alert-critical p{font-size:12px;margin-top:4px;color:#fecaca;line-height:1.5}
 
-    /* Result card */
-    .result-card { border-radius: 16px; padding: 18px; border: 1px solid; }
-    .result-card.hypoglycemia  { background: #fef2f2; border-color: #fca5a5; }
-    .result-card.normal        { background: #f0fdf4; border-color: #86efac; }
-    .result-card.slightly_high { background: #fffbeb; border-color: #fcd34d; }
-    .result-card.high          { background: #fff7ed; border-color: #fdba74; }
+/* ── RESULT CARD ── */
+.result{border-radius:18px;padding:20px;border:2px solid;margin-bottom:16px}
+.result.hypo       {background:#fef2f2;border-color:#f87171}
+.result.normal     {background:#f0fdf4;border-color:#86efac}
+.result.slight     {background:#fffbeb;border-color:#fcd34d}
+.result.high       {background:#fff7ed;border-color:#fdba74}
 
-    .result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .result-value { font-size: 22px; font-weight: 700; }
-    .result-badge { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 99px; background: rgba(255,255,255,.7); }
+.result-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.result-value{font-size:36px;font-weight:800}
+.result-label{font-size:13px;font-weight:700;padding:5px 14px;border-radius:99px;background:rgba(255,255,255,.7)}
+.result.hypo   .result-value,.result.hypo   .result-label{color:#b91c1c}
+.result.normal .result-value,.result.normal .result-label{color:#15803d}
+.result.slight .result-value,.result.slight .result-label{color:#b45309}
+.result.high   .result-value,.result.high   .result-label{color:#c2410c}
 
-    .result-card.hypoglycemia  .result-value, .result-card.hypoglycemia  .result-badge { color: #b91c1c; }
-    .result-card.normal        .result-value, .result-card.normal        .result-badge { color: #15803d; }
-    .result-card.slightly_high .result-value, .result-card.slightly_high .result-badge { color: #b45309; }
-    .result-card.high          .result-value, .result-card.high          .result-badge { color: #c2410c; }
+.result-emoji{font-size:28px;display:block;margin-bottom:8px}
+.guidance-title{font-size:15px;font-weight:700;margin-bottom:8px}
+.result.hypo   .guidance-title{color:#991b1b}
+.result.normal .guidance-title{color:#166534}
+.result.slight .guidance-title{color:#92400e}
+.result.high   .guidance-title{color:#9a3412}
 
-    .guidance { font-size: 13px; margin-bottom: 12px; line-height: 1.5; }
-    .result-card.hypoglycemia  .guidance { color: #991b1b; }
-    .result-card.normal        .guidance { color: #166534; }
-    .result-card.slightly_high .guidance { color: #92400e; }
-    .result-card.high          .guidance { color: #9a3412; }
+.suggestions{list-style:none;padding:0;margin:0 0 12px}
+.suggestions li{font-size:13px;padding:4px 0;color:#475569;display:flex;align-items:flex-start;gap:6px}
+.suggestions li::before{content:"•";color:#94a3b8;flex-shrink:0}
 
-    .medical-warning { background: rgba(255,255,255,.7); border-radius: 10px; padding: 10px 12px; font-size: 11px; color: #475569; line-height: 1.5; }
+.insight-box{background:rgba(255,255,255,.6);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.insight-box p{font-size:12px;color:#475569;display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;line-height:1.5}
+.insight-box p:last-child{margin:0}
 
-    /* History */
-    .reading-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 12px; border: 1px solid; margin-bottom: 8px; }
-    .reading-item:last-child { margin-bottom: 0; }
-    .reading-item.hypoglycemia  { background: #fef2f2; border-color: #fca5a5; }
-    .reading-item.normal        { background: #f0fdf4; border-color: #86efac; }
-    .reading-item.slightly_high { background: #fffbeb; border-color: #fcd34d; }
-    .reading-item.high          { background: #fff7ed; border-color: #fdba74; }
+.medical-warning{background:rgba(255,255,255,.7);border-radius:10px;padding:10px 14px;font-size:11px;color:#475569;line-height:1.6;border-left:3px solid #cbd5e1}
 
-    .reading-val { font-weight: 700; }
-    .reading-ctx { font-size: 12px; color: #64748b; margin-left: 8px; }
-    .reading-label { font-size: 12px; font-weight: 600; }
-    .reading-time { font-size: 11px; color: #94a3b8; }
+.wait-msg{font-size:13px;font-weight:600;color:#7c3aed;background:#f5f3ff;border-radius:8px;padding:8px 12px;margin-bottom:10px;text-align:center}
 
-    .reading-item.hypoglycemia  .reading-val, .reading-item.hypoglycemia  .reading-label { color: #b91c1c; }
-    .reading-item.normal        .reading-val, .reading-item.normal        .reading-label { color: #15803d; }
-    .reading-item.slightly_high .reading-val, .reading-item.slightly_high .reading-label { color: #b45309; }
-    .reading-item.high          .reading-val, .reading-item.high          .reading-label { color: #c2410c; }
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.stat{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px 10px;text-align:center}
+.stat-val{font-size:22px;font-weight:800;color:#0f172a}
+.stat-val.green{color:#16a34a}
+.stat-lbl{font-size:11px;color:#94a3b8;margin-top:3px}
 
-    /* Footer */
-    .footer-warn { text-align: center; font-size: 11px; color: #94a3b8; padding: 0 16px; line-height: 1.6; }
+/* ── HISTORY ── */
+.day-group{margin-bottom:18px}
+.day-label{font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;padding:0 4px}
+.reading-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:12px;border:1px solid;margin-bottom:8px;transition:transform .1s}
+.reading-row:active{transform:scale(.98)}
+.reading-row.hypo   {background:#fef2f2;border-color:#fca5a5}
+.reading-row.normal {background:#f0fdf4;border-color:#86efac}
+.reading-row.slight {background:#fffbeb;border-color:#fcd34d}
+.reading-row.high   {background:#fff7ed;border-color:#fdba74}
+.reading-val{font-size:17px;font-weight:700}
+.reading-meta{font-size:12px;color:#64748b;margin-top:2px}
+.reading-row.hypo   .reading-val{color:#b91c1c}
+.reading-row.normal .reading-val{color:#15803d}
+.reading-row.slight .reading-val{color:#b45309}
+.reading-row.high   .reading-val{color:#c2410c}
+.reading-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:rgba(255,255,255,.7)}
+.reading-row.hypo   .reading-badge{color:#b91c1c}
+.reading-row.normal .reading-badge{color:#15803d}
+.reading-row.slight .reading-badge{color:#b45309}
+.reading-row.high   .reading-badge{color:#c2410c}
+.reading-time{font-size:11px;color:#94a3b8;margin-top:2px}
+.empty-state{text-align:center;padding:40px 20px;color:#94a3b8}
+.empty-state .icon{font-size:40px;margin-bottom:10px}
 
-    .hidden { display: none !important; }
-  </style>
+/* ── CHART ── */
+.chart-wrap{position:relative;width:100%;height:280px;margin-bottom:10px}
+.chart-legend{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#64748b}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+
+/* ── BUTTONS ROW ── */
+.btn-row{display:flex;gap:10px;margin-top:4px}
+.btn-row .btn-primary,.btn-row .btn-secondary{flex:1}
+
+/* ── WHATSAPP BTN ── */
+.btn-whatsapp{width:100%;background:#25d366;color:#fff;border:none;border-radius:13px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s}
+.btn-whatsapp:hover{background:#20b858}
+.btn-whatsapp svg{width:20px;height:20px;fill:#fff}
+
+/* ── FOOTER ── */
+.footer-note{text-align:center;font-size:11px;color:#94a3b8;padding:0 16px 10px;line-height:1.6}
+
+/* ── FAB ── */
+.fab{position:fixed;bottom:24px;right:20px;background:#1e3a5f;color:#fff;border:none;border-radius:50%;width:56px;height:56px;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:200;transition:transform .15s,background .15s;display:flex;align-items:center;justify-content:center}
+.fab:hover{background:#1e40af;transform:scale(1.08)}
+</style>
 </head>
 <body>
 
 <header class="header">
-  <div class="header-brand">
-    🩸 GlicIA <span class="badge">demo</span>
-  </div>
-  <span class="header-user">Olá, João 👋</span>
+  <div class="logo">🩸 GlicIA <span class="badge">DEMO</span></div>
+  <span style="font-size:13px;opacity:.8">Olá, paciente 👋</span>
 </header>
 
-<div class="container">
+<div class="tabs">
+  <div class="tab active" onclick="showTab('medir')">📝 Medir</div>
+  <div class="tab" onclick="showTab('historico')">📋 Histórico</div>
+  <div class="tab" onclick="showTab('grafico')">📈 Gráfico</div>
+</div>
 
-  <!-- Alerta crítico (oculto por padrão) -->
-  <div class="alert-critical hidden" id="criticalAlert">
+<!-- ══════════════════ ABA MEDIR ══════════════════ -->
+<div class="page active" id="tab-medir">
+
+  <!-- Alerta crítico -->
+  <div class="alert-critical" id="criticalAlert" style="display:none">
     <div class="icon">🚨</div>
     <div>
-      <strong>Segunda hipoglicemia hoje!</strong>
-      <p>Você registrou 2 ou mais episódios hoje. Procure seu médico ou serviço de saúde.</p>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-value" id="statAvg">126</div>
-      <div class="stat-label">Média mg/dL</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value green" id="statTir">60%</div>
-      <div class="stat-label">Tempo no alvo</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value" id="statCount">5</div>
-      <div class="stat-label">Medições</div>
+      <strong>Múltiplos episódios de glicose baixa!</strong>
+      <p>Você registrou 2 ou mais hipoglicemias hoje. Procure atendimento médico ou ligue para seu médico agora.</p>
     </div>
   </div>
 
   <!-- Formulário -->
-  <div class="card">
-    <h2>Nova Medição</h2>
+  <div class="card" id="formCard">
+    <h2>🩸 Nova Medição</h2>
+
     <div class="form-group">
-      <label for="glucoseInput">Glicemia (mg/dL)</label>
-      <input type="number" id="glucoseInput" min="20" max="600" placeholder="Ex: 95" />
-      <div class="error-msg" id="errorMsg" role="alert">Valor inválido — fora do intervalo aceito (mínimo 20, máximo 600)</div>
+      <label for="glicemia">Glicemia (mg/dL)</label>
+      <input type="number" id="glicemia" min="20" max="600" placeholder="000" inputmode="numeric"/>
+      <div class="unit-hint">Insira o valor do seu glicosímetro</div>
+      <div class="error-msg" id="errorMsg">Valor inválido — use entre 20 e 600 mg/dL</div>
     </div>
+
     <div class="form-group">
-      <label>Contexto</label>
-      <div class="contexts">
-        <button class="ctx-btn active" data-ctx="Jejum" onclick="selectCtx(this)">Jejum</button>
-        <button class="ctx-btn" data-ctx="Pré-refeição" onclick="selectCtx(this)">Pré-refeição</button>
-        <button class="ctx-btn" data-ctx="Pós-refeição" onclick="selectCtx(this)">Pós-refeição</button>
+      <label>Período do dia</label>
+      <div class="opts">
+        <button class="opt active" data-group="periodo" data-val="Manhã" onclick="selectOpt(this)">🌅 Manhã</button>
+        <button class="opt" data-group="periodo" data-val="Tarde" onclick="selectOpt(this)">☀️ Tarde</button>
+        <button class="opt" data-group="periodo" data-val="Noite" onclick="selectOpt(this)">🌙 Noite</button>
       </div>
     </div>
-    <button class="btn-primary" onclick="saveReading()">Salvar Medição</button>
+
+    <div class="form-group">
+      <label>Última refeição</label>
+      <div class="opts">
+        <button class="opt active" data-group="refeicao" data-val="leve" onclick="selectOpt(this)">🥗 Leve</button>
+        <button class="opt" data-group="refeicao" data-val="normal" onclick="selectOpt(this)">🍽️ Normal</button>
+        <button class="opt" data-group="refeicao" data-val="pesada" onclick="selectOpt(this)">🍔 Pesada</button>
+        <button class="opt" data-group="refeicao" data-val="nao_comi" onclick="selectOpt(this)">⭕ Não comi</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Aplicou insulina?</label>
+      <div class="opts">
+        <button class="opt active" data-group="insulina" data-val="nao" onclick="selectOpt(this)">❌ Não</button>
+        <button class="opt" data-group="insulina" data-val="sim" onclick="selectOpt(this)">💉 Sim</button>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="salvar()">Salvar Medição</button>
   </div>
 
-  <!-- Resultado (oculto até salvar) -->
-  <div id="resultCard" class="hidden"></div>
+  <!-- Resultado -->
+  <div id="resultado" style="display:none"></div>
 
-  <!-- Histórico -->
-  <div class="card">
-    <h2>Histórico Recente</h2>
-    <div id="historyList"></div>
+  <!-- Stats do dia -->
+  <div id="statsHoje" style="display:none">
+    <div class="stats-grid" id="statsGrid"></div>
   </div>
 
-  <p class="footer-warn">
-    ⚕️ O GlicIA é uma ferramenta de monitoramento pessoal e não substitui a orientação de um profissional de saúde.
-  </p>
-
+  <p class="footer-note">⚕️ O GlicIA não substitui orientação médica. Consulte sempre seu profissional de saúde.</p>
 </div>
 
+<!-- ══════════════════ ABA HISTÓRICO ══════════════════ -->
+<div class="page" id="tab-historico">
+  <div class="card">
+    <h2>📋 Histórico de Medições</h2>
+    <div id="historyContent"><div class="empty-state"><div class="icon">📊</div><p>Nenhuma medição registrada ainda.</p></div></div>
+  </div>
+  <div class="card">
+    <h2>📄 Relatório PDF</h2>
+    <p style="font-size:13px;color:#64748b;margin-bottom:14px">Gere um relatório completo com todas as suas medições, estatísticas e gráfico para compartilhar com seu médico.</p>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="gerarPDF()">📥 Gerar Relatório PDF</button>
+      <button class="btn-whatsapp" onclick="compartilharWhatsApp()">
+        <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        WhatsApp
+      </button>
+    </div>
+  </div>
+  <p class="footer-note">⚕️ Este relatório é educativo e não substitui orientação médica.</p>
+</div>
+
+<!-- ══════════════════ ABA GRÁFICO ══════════════════ -->
+<div class="page" id="tab-grafico">
+  <div class="stats-grid" id="statsGrafico" style="margin-bottom:16px"></div>
+  <div class="card">
+    <h2>📈 Glicemia ao Longo do Dia</h2>
+    <div class="chart-wrap"><canvas id="glucoseChart"></canvas></div>
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div>Normal (70–140)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Atenção (141–180)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>Alerta (&lt;70 ou &gt;180)</div>
+    </div>
+  </div>
+  <p class="footer-note">⚕️ O GlicIA não substitui orientação médica. Consulte sempre seu profissional de saúde.</p>
+</div>
+
+<!-- FAB nova medição (visível no histórico/gráfico) -->
+<button class="fab" id="fab" style="display:none" onclick="showTab('medir')" title="Nova medição">+</button>
+
 <script>
-  const RANGES = {
-    hypoglycemia:  { label: 'Hipoglicemia',     guidance: 'Sua glicemia está abaixo do recomendado. Descanse, monitore os sintomas e busque atendimento médico se necessário.' },
-    normal:        { label: 'Normal',            guidance: 'Sua glicemia está dentro da faixa recomendada. Continue mantendo sua rotina saudável.' },
-    slightly_high: { label: 'Levemente Elevada', guidance: 'Sua glicemia está ligeiramente acima do recomendado. Hidrate-se bem e monitore a próxima medição.' },
-    high:          { label: 'Elevada',           guidance: 'Sua glicemia está acima do nível recomendado. Mantenha-se hidratado e registre este episódio para seu médico.' },
+// ══ DADOS ══
+const STATE = {
+  periodo: 'Manhã',
+  refeicao: 'leve',
+  insulina: 'nao',
+}
+
+function getReadings(){ try{ return JSON.parse(localStorage.getItem('glicia_readings')||'[]') }catch(e){ return [] } }
+function saveReadings(r){ localStorage.setItem('glicia_readings', JSON.stringify(r)) }
+
+// ── Classificação ──
+function classify(v){
+  if(v < 70)  return 'hypo'
+  if(v <= 140) return 'normal'
+  if(v <= 180) return 'slight'
+  return 'high'
+}
+const CFG = {
+  hypo:   { label:'Hipoglicemia',      emoji:'⚠️', title:'Glicose baixa (hipoglicemia)', color:'#b91c1c' },
+  normal: { label:'Normal',            emoji:'✅', title:'Glicose normal',               color:'#15803d' },
+  slight: { label:'Levemente Alta',    emoji:'⚠️', title:'Glicose levemente alta',       color:'#b45309' },
+  high:   { label:'Glicose Alta',      emoji:'🚨', title:'Glicose alta',                 color:'#c2410c' },
+}
+
+function getSuggestions(range, refeicao, insulina){
+  const map = {
+    hypo: ['1 copo de suco de laranja','1 colher de açúcar ou mel','1 bala ou sachê de açúcar'],
+    normal: ['Manter alimentação equilibrada','Continuar a rotina habitual'],
+    slight: ['Evitar açúcar e carboidratos simples','Beber bastante água','Preferir alimentos integrais'],
+    high: ['Beber bastante água (2L ou mais)','Evitar açúcar e doces','Monitorar novamente em 1–2 horas'],
+  }
+  return map[range]
+}
+
+function getWaitMsg(range){ return range === 'hypo' ? '⏱ Aguarde 15 minutos e meça novamente.' : null }
+
+function getInsights(range, refeicao, insulina){
+  const insights = []
+  if(range === 'hypo' && refeicao === 'nao_comi') insights.push('💡 Possível jejum prolongado. Coma algo adequado após corrigir a hipoglicemia.')
+  if(range === 'hypo' && insulina === 'sim')        insights.push('💡 Possível excesso de insulina ou baixa ingestão de carboidrato.')
+  return insights
+}
+
+function countTodayHypos(){
+  const today = new Date().toDateString()
+  return getReadings().filter(r => new Date(r.ts).toDateString() === today && r.range === 'hypo').length
+}
+
+// ── Select opt ──
+function selectOpt(btn){
+  const g = btn.dataset.group
+  document.querySelectorAll(`.opt[data-group="${g}"]`).forEach(b => b.classList.remove('active'))
+  btn.classList.add('active')
+  STATE[g] = btn.dataset.val
+}
+
+// ── Salvar ──
+function salvar(){
+  const input = document.getElementById('glicemia')
+  const val = Number(input.value)
+  const err = document.getElementById('errorMsg')
+
+  if(!input.value || val < 20 || val > 600){
+    err.classList.add('show'); input.focus(); return
+  }
+  err.classList.remove('show')
+
+  const now = new Date()
+  const reading = {
+    ts: now.getTime(),
+    value: val,
+    range: classify(val),
+    periodo: STATE.periodo,
+    refeicao: STATE.refeicao,
+    insulina: STATE.insulina,
+    time: now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+    date: now.toLocaleDateString('pt-BR'),
   }
 
-  const DISCLAIMER = 'Este resultado é apenas informativo. Consulte seu médico ou profissional de saúde para orientação personalizada sobre seu tratamento.'
+  const readings = getReadings()
+  readings.push(reading)
+  saveReadings(readings)
 
-  let history = [
-    { value: 95,  range: 'normal',        context: 'Jejum',        time: '07:30' },
-    { value: 158, range: 'slightly_high', context: 'Pós-refeição', time: '12:45' },
-    { value: 112, range: 'normal',        context: 'Pré-refeição', time: '18:00' },
-    { value: 64,  range: 'hypoglycemia',  context: 'Jejum',        time: '07:15' },
-    { value: 203, range: 'high',          context: 'Pós-refeição', time: '13:30' },
-  ]
-
-  let selectedCtx = 'Jejum'
-
-  function classify(v) {
-    if (v <= 69) return 'hypoglycemia'
-    if (v <= 140) return 'normal'
-    if (v <= 180) return 'slightly_high'
-    return 'high'
-  }
-
-  function selectCtx(btn) {
-    document.querySelectorAll('.ctx-btn').forEach(b => b.classList.remove('active'))
-    btn.classList.add('active')
-    selectedCtx = btn.dataset.ctx
-  }
-
-  function now() {
-    const d = new Date()
-    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0')
-  }
-
-  function saveReading() {
-    const input = document.getElementById('glucoseInput')
-    const errorMsg = document.getElementById('errorMsg')
-    const val = Number(input.value)
-
-    if (!val || val < 20 || val > 600) {
-      errorMsg.classList.add('show')
-      input.focus()
-      return
-    }
-    errorMsg.classList.remove('show')
-
-    const range = classify(val)
-    history.unshift({ value: val, range, context: selectedCtx, time: now() })
-
-    input.value = ''
-    renderResult(val, range)
-    renderHistory()
-    updateStats()
-    checkCriticalAlert()
-  }
-
-  function renderResult(val, range) {
-    const cfg = RANGES[range]
-    const card = document.getElementById('resultCard')
-    card.className = 'result-card ' + range
-    card.innerHTML = `
-      <div class="result-header">
-        <span class="result-value">${val} mg/dL</span>
-        <span class="result-badge">${cfg.label}</span>
-      </div>
-      <p class="guidance">${cfg.guidance}</p>
-      <div class="medical-warning">⚕️ ${DISCLAIMER}</div>
-    `
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }
-
-  function renderHistory() {
-    const list = document.getElementById('historyList')
-    list.innerHTML = history.slice(0, 8).map(r => `
-      <div class="reading-item ${r.range}">
-        <div>
-          <span class="reading-val">${r.value} mg/dL</span>
-          <span class="reading-ctx">${r.context}</span>
-        </div>
-        <div style="text-align:right">
-          <div class="reading-label">${RANGES[r.range].label}</div>
-          <div class="reading-time">${r.time}</div>
-        </div>
-      </div>
-    `).join('')
-  }
-
-  function updateStats() {
-    const avg = Math.round(history.reduce((s, r) => s + r.value, 0) / history.length)
-    const tir = Math.round(history.filter(r => r.range === 'normal' || r.range === 'slightly_high').length / history.length * 100)
-    document.getElementById('statAvg').textContent = avg
-    document.getElementById('statTir').textContent = tir + '%'
-    document.getElementById('statCount').textContent = history.length
-  }
-
-  function checkCriticalAlert() {
-    const hypos = history.filter(r => r.range === 'hypoglycemia').length
-    const alert = document.getElementById('criticalAlert')
-    if (hypos >= 2) alert.classList.remove('hidden')
-    else alert.classList.add('hidden')
-  }
-
-  // Inicializa
-  renderHistory()
+  input.value = ''
+  renderResult(reading)
   updateStats()
+  checkCritical()
+}
+
+// ── Renderizar resultado ──
+function renderResult(r){
+  const cfg = CFG[r.range]
+  const sugs = getSuggestions(r.range, r.refeicao, r.insulina)
+  const wait = getWaitMsg(r.range)
+  const insights = getInsights(r.range, r.refeicao, r.insulina)
+
+  const sugHtml = sugs.map(s => `<li>${s}</li>`).join('')
+  const insightHtml = insights.length ? `<div class="insight-box">${insights.map(i=>`<p>${i}</p>`).join('')}</div>` : ''
+  const waitHtml = wait ? `<div class="wait-msg">${wait}</div>` : ''
+
+  document.getElementById('resultado').innerHTML = `
+    <div class="result ${r.range}">
+      <span class="result-emoji">${cfg.emoji}</span>
+      <div class="result-top">
+        <div class="result-value">${r.value}<small style="font-size:14px;font-weight:400"> mg/dL</small></div>
+        <div class="result-label">${cfg.label}</div>
+      </div>
+      <div class="guidance-title">${cfg.title}</div>
+      <ul class="suggestions">${sugHtml}</ul>
+      ${waitHtml}
+      ${insightHtml}
+      <div class="medical-warning">⚕️ Isso não substitui orientação médica. Consulte seu profissional de saúde para orientação personalizada.</div>
+    </div>
+  `
+  document.getElementById('resultado').style.display = 'block'
+  document.getElementById('resultado').scrollIntoView({behavior:'smooth',block:'nearest'})
+}
+
+// ── Stats ──
+function updateStats(){
+  const today = new Date().toDateString()
+  const todayR = getReadings().filter(r => new Date(r.ts).toDateString() === today)
+  if(!todayR.length){ document.getElementById('statsHoje').style.display='none'; return }
+
+  const vals = todayR.map(r=>r.value)
+  const avg = Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)
+  const tir = Math.round(todayR.filter(r=>r.value>=70&&r.value<=180).length/todayR.length*100)
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat"><div class="stat-val">${avg}</div><div class="stat-lbl">Média hoje</div></div>
+    <div class="stat"><div class="stat-val green">${tir}%</div><div class="stat-lbl">Tempo no alvo</div></div>
+    <div class="stat"><div class="stat-val">${todayR.length}</div><div class="stat-lbl">Medições hoje</div></div>
+  `
+  document.getElementById('statsHoje').style.display = 'block'
+}
+
+// ── Alerta crítico ──
+function checkCritical(){
+  const hypos = countTodayHypos()
+  document.getElementById('criticalAlert').style.display = hypos >= 2 ? 'flex' : 'none'
+}
+
+// ── Histórico ──
+function renderHistory(){
+  const readings = getReadings().slice().reverse()
+  const el = document.getElementById('historyContent')
+  if(!readings.length){
+    el.innerHTML = '<div class="empty-state"><div class="icon">📊</div><p>Nenhuma medição registrada ainda.</p></div>'
+    return
+  }
+
+  // Agrupa por data
+  const groups = {}
+  readings.forEach(r=>{
+    const d = new Date(r.ts).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'})
+    if(!groups[d]) groups[d]=[]
+    groups[d].push(r)
+  })
+
+  el.innerHTML = Object.entries(groups).map(([date, items])=>`
+    <div class="day-group">
+      <div class="day-label">📅 ${date}</div>
+      ${items.map(r=>`
+        <div class="reading-row ${r.range}">
+          <div>
+            <div class="reading-val">${r.value} mg/dL</div>
+            <div class="reading-meta">${r.periodo} · ${r.refeicao === 'nao_comi' ? 'Não comeu' : r.refeicao} · Insulina: ${r.insulina}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="reading-badge">${CFG[r.range].label}</div>
+            <div class="reading-time">${r.time}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('')
+}
+
+// ── Gráfico ──
+let chartInstance = null
+function renderChart(){
+  const readings = getReadings().slice().sort((a,b)=>a.ts-b.ts)
+
+  // Stats para o gráfico
+  const el = document.getElementById('statsGrafico')
+  if(readings.length){
+    const vals = readings.map(r=>r.value)
+    const avg = Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)
+    const tir = Math.round(readings.filter(r=>r.value>=70&&r.value<=180).length/readings.length*100)
+    el.innerHTML = `
+      <div class="stat"><div class="stat-val">${avg}</div><div class="stat-lbl">Média geral</div></div>
+      <div class="stat"><div class="stat-val">${Math.min(...vals)}</div><div class="stat-lbl">Mínimo</div></div>
+      <div class="stat"><div class="stat-val">${Math.max(...vals)}</div><div class="stat-lbl">Máximo</div></div>
+    `
+  }
+
+  const labels = readings.map(r=>r.time)
+  const data   = readings.map(r=>r.value)
+  const colors = readings.map(r=>r.range==='normal'?'#22c55e':r.range==='slight'?'#f59e0b':'#ef4444')
+
+  const ctx = document.getElementById('glucoseChart').getContext('2d')
+  if(chartInstance) chartInstance.destroy()
+
+  if(!readings.length){
+    ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height)
+    ctx.fillStyle='#94a3b8'; ctx.font='14px system-ui'; ctx.textAlign='center'
+    ctx.fillText('Sem dados ainda. Registre sua primeira medição!',ctx.canvas.width/2,ctx.canvas.height/2)
+    return
+  }
+
+  chartInstance = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        label:'Glicemia (mg/dL)',
+        data,
+        pointBackgroundColor: colors,
+        pointBorderColor: colors,
+        pointRadius: 7,
+        pointHoverRadius: 9,
+        borderColor:'#94a3b8',
+        borderWidth: 2,
+        tension: 0.3,
+        fill: false,
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label: ctx => `${ctx.parsed.y} mg/dL — ${CFG[readings[ctx.dataIndex].range].label}`,
+          }
+        }
+      },
+      scales:{
+        y:{
+          min:40,
+          suggestedMax:220,
+          grid:{color:'#f1f5f9'},
+          ticks:{color:'#64748b',font:{size:11}},
+          title:{display:true,text:'mg/dL',color:'#94a3b8',font:{size:11}},
+        },
+        x:{
+          grid:{display:false},
+          ticks:{color:'#64748b',font:{size:11}},
+        }
+      }
+    },
+    plugins:[{
+      id:'zones',
+      beforeDraw(chart){
+        const {ctx,chartArea:{top,bottom,left,right},scales:{y}} = chart
+        if(!chartArea) return
+        const toY = v => y.getPixelForValue(v)
+        ctx.save()
+        // Zona verde
+        ctx.fillStyle='rgba(34,197,94,.08)'
+        ctx.fillRect(left, toY(140), right-left, toY(70)-toY(140))
+        // Zona amarela
+        ctx.fillStyle='rgba(245,158,11,.08)'
+        ctx.fillRect(left, toY(180), right-left, toY(140)-toY(180))
+        ctx.restore()
+      }
+    }]
+  })
+}
+
+// ── PDF ──
+function gerarPDF(){
+  const { jsPDF } = window.jspdf
+  const doc = new jsPDF()
+  const readings = getReadings().slice().reverse()
+
+  // Cabeçalho
+  doc.setFillColor(30,58,95)
+  doc.rect(0,0,210,28,'F')
+  doc.setTextColor(255,255,255)
+  doc.setFont('helvetica','bold')
+  doc.setFontSize(18)
+  doc.text('Relatório de Glicemia',14,13)
+  doc.setFontSize(10)
+  doc.setFont('helvetica','normal')
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`,14,22)
+  doc.setTextColor(0,0,0)
+
+  // Stats
+  if(readings.length){
+    const vals = readings.map(r=>r.value)
+    const avg = Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)
+    const min = Math.min(...vals); const max = Math.max(...vals)
+    const hypos = readings.filter(r=>r.range==='hypo').length
+    const tir = Math.round(readings.filter(r=>r.value>=70&&r.value<=180).length/readings.length*100)
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(12)
+    doc.text('Resumo Estatístico',14,38)
+    doc.setFont('helvetica','normal'); doc.setFontSize(10)
+    doc.text(`Média geral: ${avg} mg/dL  |  Mínimo: ${min}  |  Máximo: ${max}  |  Tempo no alvo: ${tir}%`,14,46)
+
+    if(hypos > 0){
+      doc.setTextColor(185,28,28)
+      doc.text(`⚠ Foram detectados ${hypos} episódio(s) de hipoglicemia.`,14,54)
+      doc.setTextColor(0,0,0)
+    }
+
+    // Observações automáticas
+    let y = hypos > 0 ? 62 : 54
+    const obs = []
+    if(readings.filter(r=>r.range==='high').length > 0)  obs.push('Foram detectados episódios de glicemia elevada.')
+    if(readings.filter(r=>r.refeicao==='pesada').length > 0) obs.push('Algumas medições foram após refeições pesadas.')
+    if(readings.filter(r=>r.insulina==='sim').length > 0) obs.push('O paciente registrou uso de insulina em algumas medições.')
+
+    if(obs.length){
+      doc.setFont('helvetica','bold'); doc.setFontSize(11)
+      doc.text('Observações Automáticas',14,y); y+=8
+      doc.setFont('helvetica','normal'); doc.setFontSize(10)
+      obs.forEach(o=>{ doc.text(`• ${o}`,16,y); y+=7 })
+    }
+
+    // Tabela de medições
+    doc.setFont('helvetica','bold'); doc.setFontSize(12)
+    doc.text('Lista de Medições',14,y+4)
+
+    doc.autoTable({
+      startY: y+10,
+      head:[['Data','Hora','Glicemia','Classificação','Período','Refeição','Insulina']],
+      body: readings.map(r=>[
+        r.date, r.time, `${r.value} mg/dL`, CFG[r.range].label,
+        r.periodo, r.refeicao==='nao_comi'?'Não comeu':r.refeicao, r.insulina
+      ]),
+      styles:{fontSize:9,cellPadding:3},
+      headStyles:{fillColor:[30,58,95],textColor:255,fontStyle:'bold'},
+      alternateRowStyles:{fillColor:[248,250,252]},
+      columnStyles:{2:{fontStyle:'bold'}},
+    })
+  } else {
+    doc.setFontSize(12); doc.text('Nenhuma medição registrada.',14,38)
+  }
+
+  // Rodapé
+  const pageCount = doc.internal.getNumberOfPages()
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i)
+    doc.setFillColor(248,250,252)
+    doc.rect(0,285,210,12,'F')
+    doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(100,116,139)
+    doc.text('⚕ Este relatório é educativo e não substitui orientação médica. Consulte sempre seu médico.',14,292)
+    doc.text(`Página ${i}/${pageCount}`,196,292,{align:'right'})
+  }
+
+  doc.save(`glicia-relatorio-${new Date().toISOString().slice(0,10)}.pdf`)
+}
+
+// ── WhatsApp ──
+function compartilharWhatsApp(){
+  const readings = getReadings().slice().reverse().slice(0,10)
+  if(!readings.length){ alert('Nenhuma medição para compartilhar.'); return }
+
+  const vals = readings.map(r=>r.value)
+  const avg = Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)
+  const hypos = readings.filter(r=>r.range==='hypo').length
+  const alerta = hypos>=2 ? '\n🚨 *ATENÇÃO: Múltiplos episódios de hipoglicemia*' : ''
+
+  const linhas = readings.slice(0,5).map(r=>`• ${r.date} ${r.time} — *${r.value} mg/dL* (${CFG[r.range].label})`).join('\n')
+  const msg = `🩸 *Relatório GlicIA*\n📅 ${new Date().toLocaleDateString('pt-BR')}\n\n*Últimas medições:*\n${linhas}${readings.length>5?'\n...e mais ':''}\n\n📊 *Média:* ${avg} mg/dL${alerta}\n\n_⚕️ Este relatório é educativo e não substitui orientação médica._`
+
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
+}
+
+// ── Tabs ──
+function showTab(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'))
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'))
+  document.getElementById('tab-'+name).classList.add('active')
+  document.querySelectorAll('.tab')[['medir','historico','grafico'].indexOf(name)].classList.add('active')
+  document.getElementById('fab').style.display = name==='medir'?'none':'flex'
+
+  if(name==='historico') renderHistory()
+  if(name==='grafico')   renderChart()
+}
+
+// ── Init ──
+updateStats()
+checkCritical()
 </script>
 </body>
 </html>
