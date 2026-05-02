@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GlicIA — Assistente de Glicemia</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; color: #0f172a; min-height: 100vh; }
+
+    /* Header */
+    .header { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+    .header-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.1rem; }
+    .badge { background: #dbeafe; color: #1d4ed8; font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+    .header-user { font-size: 14px; color: #64748b; }
+
+    /* Layout */
+    .container { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; display: flex; flex-direction: column; gap: 16px; }
+
+    /* Cards */
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; }
+    .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 14px; color: #0f172a; }
+
+    /* Stats grid */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; text-align: center; }
+    .stat-value { font-size: 24px; font-weight: 700; color: #0f172a; }
+    .stat-value.green { color: #16a34a; }
+    .stat-label { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+
+    /* Alert critical */
+    .alert-critical { background: #dc2626; color: #fff; border-radius: 16px; padding: 16px; display: flex; gap: 12px; align-items: flex-start; }
+    .alert-critical .icon { font-size: 22px; flex-shrink: 0; }
+    .alert-critical strong { font-size: 14px; display: block; }
+    .alert-critical p { font-size: 12px; margin-top: 4px; color: #fecaca; }
+
+    /* Form */
+    label { display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px; }
+    input[type=number] { width: 100%; border: 1px solid #d1d5db; border-radius: 12px; padding: 12px 16px; font-size: 20px; font-weight: 700; outline: none; transition: border-color .2s; }
+    input[type=number]:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+    .form-group { margin-bottom: 14px; }
+    .error-msg { color: #dc2626; font-size: 12px; margin-top: 5px; display: none; }
+    .error-msg.show { display: block; }
+
+    /* Context buttons */
+    .contexts { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ctx-btn { padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; border: 1px solid #d1d5db; background: #fff; color: #374151; cursor: pointer; transition: all .15s; }
+    .ctx-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .ctx-btn:hover:not(.active) { background: #f1f5f9; }
+
+    /* Submit button */
+    .btn-primary { width: 100%; background: #2563eb; color: #fff; border: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s; margin-top: 4px; }
+    .btn-primary:hover { background: #1d4ed8; }
+
+    /* Result card */
+    .result-card { border-radius: 16px; padding: 18px; border: 1px solid; }
+    .result-card.hypoglycemia  { background: #fef2f2; border-color: #fca5a5; }
+    .result-card.normal        { background: #f0fdf4; border-color: #86efac; }
+    .result-card.slightly_high { background: #fffbeb; border-color: #fcd34d; }
+    .result-card.high          { background: #fff7ed; border-color: #fdba74; }
+
+    .result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .result-value { font-size: 22px; font-weight: 700; }
+    .result-badge { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 99px; background: rgba(255,255,255,.7); }
+
+    .result-card.hypoglycemia  .result-value, .result-card.hypoglycemia  .result-badge { color: #b91c1c; }
+    .result-card.normal        .result-value, .result-card.normal        .result-badge { color: #15803d; }
+    .result-card.slightly_high .result-value, .result-card.slightly_high .result-badge { color: #b45309; }
+    .result-card.high          .result-value, .result-card.high          .result-badge { color: #c2410c; }
+
+    .guidance { font-size: 13px; margin-bottom: 12px; line-height: 1.5; }
+    .result-card.hypoglycemia  .guidance { color: #991b1b; }
+    .result-card.normal        .guidance { color: #166534; }
+    .result-card.slightly_high .guidance { color: #92400e; }
+    .result-card.high          .guidance { color: #9a3412; }
+
+    .medical-warning { background: rgba(255,255,255,.7); border-radius: 10px; padding: 10px 12px; font-size: 11px; color: #475569; line-height: 1.5; }
+
+    /* History */
+    .reading-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 12px; border: 1px solid; margin-bottom: 8px; }
+    .reading-item:last-child { margin-bottom: 0; }
+    .reading-item.hypoglycemia  { background: #fef2f2; border-color: #fca5a5; }
+    .reading-item.normal        { background: #f0fdf4; border-color: #86efac; }
+    .reading-item.slightly_high { background: #fffbeb; border-color: #fcd34d; }
+    .reading-item.high          { background: #fff7ed; border-color: #fdba74; }
+
+    .reading-val { font-weight: 700; }
+    .reading-ctx { font-size: 12px; color: #64748b; margin-left: 8px; }
+    .reading-label { font-size: 12px; font-weight: 600; }
+    .reading-time { font-size: 11px; color: #94a3b8; }
+
+    .reading-item.hypoglycemia  .reading-val, .reading-item.hypoglycemia  .reading-label { color: #b91c1c; }
+    .reading-item.normal        .reading-val, .reading-item.normal        .reading-label { color: #15803d; }
+    .reading-item.slightly_high .reading-val, .reading-item.slightly_high .reading-label { color: #b45309; }
+    .reading-item.high          .reading-val, .reading-item.high          .reading-label { color: #c2410c; }
+
+    /* Footer */
+    .footer-warn { text-align: center; font-size: 11px; color: #94a3b8; padding: 0 16px; line-height: 1.6; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-brand">
+    🩸 GlicIA <span class="badge">demo</span>
+  </div>
+  <span class="header-user">Olá, João 👋</span>
+</header>
+
+<div class="container">
+
+  <!-- Alerta crítico (oculto por padrão) -->
+  <div class="alert-critical hidden" id="criticalAlert">
+    <div class="icon">🚨</div>
+    <div>
+      <strong>Segunda hipoglicemia hoje!</strong>
+      <p>Você registrou 2 ou mais episódios hoje. Procure seu médico ou serviço de saúde.</p>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value" id="statAvg">126</div>
+      <div class="stat-label">Média mg/dL</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value green" id="statTir">60%</div>
+      <div class="stat-label">Tempo no alvo</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="statCount">5</div>
+      <div class="stat-label">Medições</div>
+    </div>
+  </div>
+
+  <!-- Formulário -->
+  <div class="card">
+    <h2>Nova Medição</h2>
+    <div class="form-group">
+      <label for="glucoseInput">Glicemia (mg/dL)</label>
+      <input type="number" id="glucoseInput" min="20" max="600" placeholder="Ex: 95" />
+      <div class="error-msg" id="errorMsg" role="alert">Valor inválido — fora do intervalo aceito (mínimo 20, máximo 600)</div>
+    </div>
+    <div class="form-group">
+      <label>Contexto</label>
+      <div class="contexts">
+        <button class="ctx-btn active" data-ctx="Jejum" onclick="selectCtx(this)">Jejum</button>
+        <button class="ctx-btn" data-ctx="Pré-refeição" onclick="selectCtx(this)">Pré-refeição</button>
+        <button class="ctx-btn" data-ctx="Pós-refeição" onclick="selectCtx(this)">Pós-refeição</button>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="saveReading()">Salvar Medição</button>
+  </div>
+
+  <!-- Resultado (oculto até salvar) -->
+  <div id="resultCard" class="hidden"></div>
+
+  <!-- Histórico -->
+  <div class="card">
+    <h2>Histórico Recente</h2>
+    <div id="historyList"></div>
+  </div>
+
+  <p class="footer-warn">
+    ⚕️ O GlicIA é uma ferramenta de monitoramento pessoal e não substitui a orientação de um profissional de saúde.
+  </p>
+
+</div>
+
+<script>
+  const RANGES = {
+    hypoglycemia:  { label: 'Hipoglicemia',     guidance: 'Sua glicemia está abaixo do recomendado. Descanse, monitore os sintomas e busque atendimento médico se necessário.' },
+    normal:        { label: 'Normal',            guidance: 'Sua glicemia está dentro da faixa recomendada. Continue mantendo sua rotina saudável.' },
+    slightly_high: { label: 'Levemente Elevada', guidance: 'Sua glicemia está ligeiramente acima do recomendado. Hidrate-se bem e monitore a próxima medição.' },
+    high:          { label: 'Elevada',           guidance: 'Sua glicemia está acima do nível recomendado. Mantenha-se hidratado e registre este episódio para seu médico.' },
+  }
+
+  const DISCLAIMER = 'Este resultado é apenas informativo. Consulte seu médico ou profissional de saúde para orientação personalizada sobre seu tratamento.'
+
+  let history = [
+    { value: 95,  range: 'normal',        context: 'Jejum',        time: '07:30' },
+    { value: 158, range: 'slightly_high', context: 'Pós-refeição', time: '12:45' },
+    { value: 112, range: 'normal',        context: 'Pré-refeição', time: '18:00' },
+    { value: 64,  range: 'hypoglycemia',  context: 'Jejum',        time: '07:15' },
+    { value: 203, range: 'high',          context: 'Pós-refeição', time: '13:30' },
+  ]
+
+  let selectedCtx = 'Jejum'
+
+  function classify(v) {
+    if (v <= 69) return 'hypoglycemia'
+    if (v <= 140) return 'normal'
+    if (v <= 180) return 'slightly_high'
+    return 'high'
+  }
+
+  function selectCtx(btn) {
+    document.querySelectorAll('.ctx-btn').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    selectedCtx = btn.dataset.ctx
+  }
+
+  function now() {
+    const d = new Date()
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0')
+  }
+
+  function saveReading() {
+    const input = document.getElementById('glucoseInput')
+    const errorMsg = document.getElementById('errorMsg')
+    const val = Number(input.value)
+
+    if (!val || val < 20 || val > 600) {
+      errorMsg.classList.add('show')
+      input.focus()
+      return
+    }
+    errorMsg.classList.remove('show')
+
+    const range = classify(val)
+    history.unshift({ value: val, range, context: selectedCtx, time: now() })
+
+    input.value = ''
+    renderResult(val, range)
+    renderHistory()
+    updateStats()
+    checkCriticalAlert()
+  }
+
+  function renderResult(val, range) {
+    const cfg = RANGES[range]
+    const card = document.getElementById('resultCard')
+    card.className = 'result-card ' + range
+    card.innerHTML = `
+      <div class="result-header">
+        <span class="result-value">${val} mg/dL</span>
+        <span class="result-badge">${cfg.label}</span>
+      </div>
+      <p class="guidance">${cfg.guidance}</p>
+      <div class="medical-warning">⚕️ ${DISCLAIMER}</div>
+    `
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('historyList')
+    list.innerHTML = history.slice(0, 8).map(r => `
+      <div class="reading-item ${r.range}">
+        <div>
+          <span class="reading-val">${r.value} mg/dL</span>
+          <span class="reading-ctx">${r.context}</span>
+        </div>
+        <div style="text-align:right">
+          <div class="reading-label">${RANGES[r.range].label}</div>
+          <div class="reading-time">${r.time}</div>
+        </div>
+      </div>
+    `).join('')
+  }
+
+  function updateStats() {
+    const avg = Math.round(history.reduce((s, r) => s + r.value, 0) / history.length)
+    const tir = Math.round(history.filter(r => r.range === 'normal' || r.range === 'slightly_high').length / history.length * 100)
+    document.getElementById('statAvg').textContent = avg
+    document.getElementById('statTir').textContent = tir + '%'
+    document.getElementById('statCount').textContent = history.length
+  }
+
+  function checkCriticalAlert() {
+    const hypos = history.filter(r => r.range === 'hypoglycemia').length
+    const alert = document.getElementById('criticalAlert')
+    if (hypos >= 2) alert.classList.remove('hidden')
+    else alert.classList.add('hidden')
+  }
+
+  // Inicializa
+  renderHistory()
+  updateStats()
+</script>
+</body>
+</html>
